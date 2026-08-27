@@ -83,12 +83,18 @@
     transform: rotate(-1.5deg);
   }
 
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
   .logo-img {
     display: block;
-    width: 100%;
-    max-width: 220px;
-    height: auto;
-    margin: 4px 0 10px 0;
+    width: auto;
+    height: 72px;
+    margin: 0;
     filter: drop-shadow(0 0 14px rgba(195,50,181,0.55)) drop-shadow(0 0 24px rgba(0,241,255,0.25));
   }
 
@@ -145,7 +151,7 @@
   .prompt-line .path { color: var(--amber); }
 
   .links-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  @media (max-width: 520px) { .links-grid { grid-template-columns: 1fr; } h1.title { font-size: 44px; } }
+  @media (max-width: 520px) { .links-grid { grid-template-columns: 1fr; } h1.title { font-size: 44px; } .logo-img { height: 48px; } }
 
   .link-row {
     display: flex; align-items: center; gap: 10px;
@@ -200,8 +206,10 @@
 
   <div id="main-content">
     <div class="stamp">ACCESS GRANTED</div>
-    <img src="images/logo.png" alt="Ctrl+U logo" class="logo-img">
-    <h1 class="title"><span class="glitch-wrap">CTRL+U</span></h1>
+    <div class="title-row">
+      <img src="images/logo.png" alt="Ctrl+U logo" class="logo-img">
+      <h1 class="title"><span class="glitch-wrap">CTRL+U</span></h1>
+    </div>
     <div class="subtitle">// root access :: identity confirmed :: welcome back, listener</div>
 
     <div class="panel" data-label="ABOUT">
