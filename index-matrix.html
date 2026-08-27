@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ctrl+U // ACCESS TERMINAL</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00ff41;
+    --green-dim: #0d7a2b;
+    --green-glow: rgba(0,255,65,0.55);
+    --bg: #000000;
+    --amber: #ffb300;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--green); color: #000; }
+
+  canvas#rain {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0; opacity: 0.55;
+  }
+
+  .scanlines {
+    position: fixed; inset: 0; z-index: 5; pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.35) 3px, rgba(0,0,0,0) 4px
+    );
+    mix-blend-mode: overlay;
+  }
+  .vignette {
+    position: fixed; inset: 0; z-index: 4; pointer-events: none;
+    box-shadow: inset 0 0 180px 60px rgba(0,0,0,0.85);
+  }
+  .flicker {
+    position: fixed; inset: 0; z-index: 6; pointer-events: none;
+    background: rgba(0,255,65,0.02);
+    animation: flick 6s infinite;
+  }
+  @keyframes flick {
+    0%, 96%, 100% { opacity: 0; }
+    97% { opacity: 1; }
+    98% { opacity: 0; }
+  }
+
+  .stage {
+    position: relative; z-index: 2;
+    max-width: 760px; margin: 0 auto;
+    padding: 60px 20px 140px;
+    min-height: 100vh;
+  }
+
+  #boot {
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.6;
+    text-shadow: 0 0 6px var(--green-glow);
+  }
+  #boot .cursor { animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  #main-content { display: none; }
+  #main-content.show { display: block; animation: fadeUp 0.6s ease both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .stamp {
+    display: inline-block;
+    border: 2px solid var(--green);
+    color: var(--green);
+    padding: 4px 14px;
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    letter-spacing: 4px;
+    text-shadow: 0 0 8px var(--green-glow);
+    box-shadow: 0 0 14px rgba(0,255,65,0.25);
+    margin-bottom: 20px;
+    transform: rotate(-1.5deg);
+  }
+
+  h1.title {
+    font-family: 'VT323', monospace;
+    font-size: 64px;
+    margin: 0 0 6px 0;
+    letter-spacing: 3px;
+    text-shadow: 0 0 10px var(--green-glow), 0 0 22px var(--green-glow);
+    line-height: 1;
+  }
+  .glitch-wrap { position: relative; display: inline-block; }
+  .glitch-wrap::before, .glitch-wrap::after {
+    content: 'CTRL+U'; position: absolute; top: 0; left: 0; width: 100%;
+    overflow: hidden; opacity: 0.7;
+  }
+  .glitch-wrap::before {
+    color: #ff003c; clip-path: inset(0 0 55% 0);
+    animation: glitchTop 3.2s infinite linear alternate-reverse;
+  }
+  .glitch-wrap::after {
+    color: #00e5ff; clip-path: inset(55% 0 0 0);
+    animation: glitchBottom 2.6s infinite linear alternate-reverse;
+  }
+  @keyframes glitchTop {
+    0% { transform: translate(0,0); } 20% { transform: translate(-2px,-1px); }
+    40% { transform: translate(2px,1px); } 60% { transform: translate(-1px,1px); }
+    80% { transform: translate(1px,-1px); } 100% { transform: translate(0,0); }
+  }
+  @keyframes glitchBottom {
+    0% { transform: translate(0,0); } 25% { transform: translate(2px,1px); }
+    50% { transform: translate(-2px,0); } 75% { transform: translate(1px,-1px); }
+    100% { transform: translate(0,0); }
+  }
+
+  .subtitle { color: var(--green-dim); font-size: 14px; margin-bottom: 40px; letter-spacing: 1px; }
+
+  .panel {
+    border: 1px solid var(--green-dim);
+    background: rgba(0, 20, 6, 0.55);
+    padding: 18px 20px;
+    margin-bottom: 26px;
+    position: relative;
+  }
+  .panel::before {
+    content: attr(data-label);
+    position: absolute; top: -11px; left: 14px;
+    background: #000; padding: 0 8px;
+    font-size: 12px; color: var(--green); letter-spacing: 3px;
+  }
+  .panel p { margin: 6px 0 0 0; line-height: 1.7; color: #b6f5c4; font-size: 14.5px; }
+
+  .prompt-line { color: var(--green); font-size: 13px; margin-bottom: 10px; }
+  .prompt-line .path { color: var(--amber); }
+
+  .links-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 520px) { .links-grid { grid-template-columns: 1fr; } h1.title { font-size: 44px; } }
+
+  .link-row {
+    display: flex; align-items: center; gap: 10px;
+    border: 1px solid var(--green-dim);
+    padding: 10px 12px;
+    color: var(--green);
+    background: rgba(0,255,65,0.03);
+    transition: all 0.15s ease;
+  }
+  .link-row:hover {
+    background: rgba(0,255,65,0.12);
+    box-shadow: 0 0 12px rgba(0,255,65,0.35);
+    transform: translateX(3px);
+  }
+  .link-row .bracket { color: var(--green-dim); }
+  .link-row .arrow { margin-left: auto; opacity: 0; }
+  .link-row:hover .arrow { opacity: 1; }
+
+  .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .gallery div {
+    aspect-ratio: 1; border: 1px dashed var(--green-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--green-dim); text-align: center; padding: 6px;
+    background: repeating-linear-gradient(45deg, rgba(0,255,65,0.03) 0 4px, transparent 4px 8px);
+  }
+
+  .footer-note {
+    color: var(--green-dim); font-size: 12px; margin-top: 30px;
+    border-top: 1px solid var(--green-dim); padding-top: 14px;
+  }
+
+  .skip-btn {
+    position: fixed; bottom: 14px; right: 14px; z-index: 20;
+    background: transparent; border: 1px solid var(--green-dim); color: var(--green-dim);
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    padding: 6px 10px; cursor: pointer;
+  }
+  .skip-btn:hover { color: var(--green); border-color: var(--green); }
+</style>
+</head>
+<body>
+
+<canvas id="rain"></canvas>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+<div class="flicker"></div>
+
+<button class="skip-btn" id="skipBtn">SKIP INTRO</button>
+
+<div class="stage">
+  <div id="boot"></div>
+
+  <div id="main-content">
+    <div class="stamp">ACCESS GRANTED</div>
+    <h1 class="title"><span class="glitch-wrap">CTRL+U</span></h1>
+    <div class="subtitle">// root access :: identity confirmed :: welcome back, listener</div>
+
+    <div class="panel" data-label="ABOUT">
+      <p>Producer &amp; songwriter running on caffeine and side-effects. Music built like software — loops, bugs, and the occasional feature you didn't know you needed. New EP compiling now.</p>
+    </div>
+
+    <div class="panel" data-label="VISUAL LOG">
+      <div class="gallery">
+        <div>cover_art_01.png</div>
+        <div>session_still.jpg</div>
+        <div>tour_poster.png</div>
+        <div>studio_cam.jpg</div>
+        <div>merch_mock.png</div>
+        <div>visualizer.mp4</div>
+      </div>
+    </div>
+
+    <div class="panel" data-label="STREAM">
+      <div class="prompt-line"><span class="path">~/listen $</span> ls -la</div>
+      <div class="links-grid">
+        <a class="link-row" href="#" target="_blank" rel="noopener"><span class="bracket">[</span>spotify<span class="bracket">]</span><span class="arrow">→</span></a>
+        <a class="link-row" href="#" target="_blank" rel="noopener"><span class="bracket">[</span>apple_music<span class="bracket">]</span><span class="arrow">→</span></a>
+        <a class="link-row" href="#" target="_blank" rel="noopener"><span class="bracket">[</span>soundcloud<span class="bracket">]</span><span class="arrow">→</span></a>
+        <a class="link-row" href="#" target="_blank" rel="noopener"><span class="bracket">[</span>youtube<span class="bracket">]</span><span class="arrow">→</span></a>
+      </div>
+    </div>
+
+    <div class="panel" data-label="SHOP">
+      <div class="prompt-line"><span class="path">~/shop $</span> ls -la</div>
+      <div class="links-grid">
+        <a class="link-row" href="#" target="_blank" rel="noopener"><span class="bracket">[</span>merch<span class="bracket">]</span><span class="arrow">→</span></a>
+        <a class="link-row" href="#" target="_blank" rel="noopener"><span class="bracket">[</span>bandcamp<span class="bracket">]</span><span class="arrow">→</span></a>
+      </div>
+    </div>
+
+    <div class="panel" data-label="SOCIALS">
+      <div class="prompt-line"><span class="path">~/socials $</span> ls -la</div>
+      <div class="links-grid">
+        <a class="link-row" href="#" target="_blank" rel="noopener"><span class="bracket">[</span>instagram<span class="bracket">]</span><span class="arrow">→</span></a>
+        <a class="link-row" href="#" target="_blank" rel="noopener"><span class="bracket">[</span>tiktok<span class="bracket">]</span><span class="arrow">→</span></a>
+        <a class="link-row" href="#" target="_blank" rel="noopener"><span class="bracket">[</span>x<span class="bracket">]</span><span class="arrow">→</span></a>
+        <a class="link-row" href="mailto:you@email.com"><span class="bracket">[</span>email<span class="bracket">]</span><span class="arrow">→</span></a>
+      </div>
+    </div>
+
+    <div class="footer-note">SESSION SECURE :: 128-BIT :: DISCONNECT ANYTIME BY CLOSING THIS TAB</div>
+  </div>
+</div>
+
+<script>
+  // ---- Matrix rain ----
+  const canvas = document.getElementById('rain');
+  const ctx = canvas.getContext('2d');
+  let w, h, cols, drops;
+  const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789<>/=+*';
+
+  function setup() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+    cols = Math.floor(w / 16);
+    drops = new Array(cols).fill(1);
+  }
+  setup();
+  window.addEventListener('resize', setup);
+
+  function draw() {
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#00ff41';
+    ctx.font = '15px monospace';
+    for (let i = 0; i < drops.length; i++) {
+      const text = chars[Math.floor(Math.random() * chars.length)];
+      ctx.fillText(text, i * 16, drops[i] * 16);
+      if (drops[i] * 16 > h && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+  }
+  setInterval(draw, 45);
+
+  // ---- Boot sequence ----
+  const bootLines = [
+    'INITIALIZING SECURE SHELL...',
+    'CONNECTING TO CTRL-U.NET...',
+    'BYPASSING FIREWALL............ OK',
+    'DECRYPTING ARTIST PROFILE..... OK',
+    'LOADING DISCOGRAPHY........... OK',
+    'VERIFYING IDENTITY: CTRL+U',
+    '',
+    'ACCESS GRANTED_'
+  ];
+  const bootEl = document.getElementById('boot');
+  const mainEl = document.getElementById('main-content');
+  const skipBtn = document.getElementById('skipBtn');
+  let bootDone = false;
+
+  function finishBoot() {
+    if (bootDone) return;
+    bootDone = true;
+    bootEl.style.display = 'none';
+    mainEl.classList.add('show');
+    skipBtn.style.display = 'none';
+  }
+
+  async function runBoot() {
+    let out = '';
+    for (const line of bootLines) {
+      for (const ch of line) {
+        out += ch;
+        bootEl.innerHTML = out + '<span class="cursor">_</span>';
+        await new Promise(r => setTimeout(r, 14));
+      }
+      out += '\n';
+      await new Promise(r => setTimeout(r, 120));
+    }
+    await new Promise(r => setTimeout(r, 500));
+    finishBoot();
+  }
+  runBoot();
+  skipBtn.addEventListener('click', finishBoot);
+</script>
+
+</body>
+</html>
