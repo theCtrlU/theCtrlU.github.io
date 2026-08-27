@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ctrl+U</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-gutter: #0a0d12;
+    --line: #161b22;
+    --text: #c9d1d9;
+    --muted: #6e7681;
+    --comment: #8b949e;
+    --tag: #7ee787;
+    --attr: #79c0ff;
+    --string: #a5d6ff;
+    --keyword: #ff7b72;
+    --func: #d2a8ff;
+    --cursor: #58a6ff;
+  }
+
+  * { box-sizing: border-box; }
+
+  ::selection { background: #264f78; color: #fff; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background: var(--bg-gutter);
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .dots { display: flex; gap: 6px; margin-right: 6px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dot.red { background: #ff5f56; }
+  .dot.yellow { background: #ffbd2e; }
+  .dot.green { background: #27c93f; }
+  .filename { color: var(--text); }
+  .filename::before { content: "● "; color: var(--cursor); }
+
+  .wrap {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .gutter {
+    background: var(--bg-gutter);
+    text-align: right;
+    padding: 32px 12px 120px 0;
+    color: var(--muted);
+    user-select: none;
+    border-right: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .gutter div { height: 1.7em; }
+  .gutter .hl { color: var(--cursor); }
+
+  .code {
+    padding: 32px 24px 120px 20px;
+    overflow-x: auto;
+  }
+  .code .row { min-height: 1.7em; white-space: pre-wrap; word-break: break-word; }
+
+  .c { color: var(--comment); font-style: italic; }
+  .k { color: var(--keyword); }
+  .t { color: var(--tag); }
+  .a { color: var(--attr); }
+  .s { color: var(--string); }
+  .f { color: var(--func); }
+  .indent-1 { padding-left: 2ch; }
+  .indent-2 { padding-left: 4ch; }
+  .indent-3 { padding-left: 6ch; }
+
+  .name-block {
+    margin: 6px 0 2px 0;
+  }
+  .name-block .big {
+    font-size: 34px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+  .cursor-blink {
+    display: inline-block;
+    width: 10px;
+    height: 30px;
+    background: var(--cursor);
+    margin-left: 4px;
+    vertical-align: -6px;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .bio-text { color: var(--text); }
+
+  .links-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 6px 0 10px 0;
+  }
+  @media (max-width: 560px) {
+    .links-grid { grid-template-columns: 1fr; }
+    body { font-size: 13.5px; }
+    .wrap { grid-template-columns: 40px 1fr; }
+    .name-block .big { font-size: 24px; }
+  }
+
+  .link-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--line);
+    border: 1px solid #21262d;
+    border-radius: 6px;
+    transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  }
+  .link-card:hover {
+    border-color: var(--cursor);
+    background: #1c2531;
+    transform: translateX(3px);
+  }
+  .link-card .k-inline { color: var(--muted); font-size: 12px; }
+  .link-card .label { color: #fff; font-weight: 500; }
+  .link-card .arrow { margin-left: auto; color: var(--cursor); opacity: 0; transition: opacity 0.12s ease; }
+  .link-card:hover .arrow { opacity: 1; }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 8px 0 10px 0;
+  }
+  .gallery div {
+    aspect-ratio: 1;
+    background: linear-gradient(135deg, #161b22, #21262d);
+    border: 1px dashed #30363d;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 11px;
+    text-align: center;
+    padding: 6px;
+  }
+
+  .footer-comment {
+    color: var(--comment);
+    font-style: italic;
+    font-size: 13px;
+  }
+
+  .status-bar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 20px;
+    background: var(--cursor);
+    color: #0d1117;
+    font-size: 12px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="dots">
+    <div class="dot red"></div>
+    <div class="dot yellow"></div>
+    <div class="dot green"></div>
+  </div>
+  <span class="filename">view-source:ctrl-plus-u.dev/index.html</span>
+</div>
+
+<div class="wrap">
+  <div class="gutter" id="gutter"></div>
+  <div class="code" id="code">
+
+    <div class="row"><span class="c">&lt;!-- you hit ctrl+u. this is what you get. --&gt;</span></div>
+    <div class="row"><span class="k">&lt;!DOCTYPE</span> <span class="a">html</span><span class="k">&gt;</span></div>
+    <div class="row"><span class="t">&lt;html</span> <span class="a">lang</span>=<span class="s">"artist"</span><span class="t">&gt;</span></div>
+    <div class="row"><span class="t indent-1">&lt;head&gt;</span></div>
+    <div class="row"><span class="t indent-2">&lt;title&gt;</span><span class="name-block"><span class="big">Ctrl+U</span><span class="cursor-blink"></span></span><span class="t">&lt;/title&gt;</span></div>
+    <div class="row"><span class="t indent-1">&lt;/head&gt;</span></div>
+    <div class="row"></div>
+
+    <div class="row"><span class="t">&lt;body&gt;</span></div>
+    <div class="row"></div>
+
+    <div class="row indent-1"><span class="c">&lt;!-- bio --&gt;</span></div>
+    <div class="row indent-1"><span class="t">&lt;section</span> <span class="a">id</span>=<span class="s">"about"</span><span class="t">&gt;</span></div>
+    <div class="row indent-2 bio-text">
+      Producer &amp; songwriter running on caffeine and side-effects.
+      Music built like software — loops, bugs, and the occasional
+      feature you didn't know you needed. New EP compiling now.
+    </div>
+    <div class="row indent-1"><span class="t">&lt;/section&gt;</span></div>
+    <div class="row"></div>
+
+    <div class="row indent-1"><span class="c">&lt;!-- portfolio / visuals --&gt;</span></div>
+    <div class="row indent-1"><span class="t">&lt;section</span> <span class="a">id</span>=<span class="s">"work"</span><span class="t">&gt;</span></div>
+    <div class="row indent-2">
+      <div class="gallery">
+        <div>cover_art_01.png</div>
+        <div>session_still.jpg</div>
+        <div>tour_poster.png</div>
+        <div>studio_cam.jpg</div>
+        <div>merch_mock.png</div>
+        <div>visualizer.mp4</div>
+      </div>
+    </div>
+    <div class="row indent-1"><span class="t">&lt;/section&gt;</span></div>
+    <div class="row"></div>
+
+    <div class="row indent-1"><span class="c">&lt;!-- stream --&gt;</span></div>
+    <div class="row indent-1"><span class="t">&lt;section</span> <span class="a">id</span>=<span class="s">"listen"</span><span class="t">&gt;</span></div>
+    <div class="row indent-2">
+      <div class="links-grid">
+        <a class="link-card" href="#" target="_blank" rel="noopener">
+          <span class="k-inline">cd</span><span class="label">&nbsp;~/spotify</span><span class="arrow">→</span>
+        </a>
+        <a class="link-card" href="#" target="_blank" rel="noopener">
+          <span class="k-inline">cd</span><span class="label">&nbsp;~/apple-music</span><span class="arrow">→</span>
+        </a>
+        <a class="link-card" href="#" target="_blank" rel="noopener">
+          <span class="k-inline">cd</span><span class="label">&nbsp;~/soundcloud</span><span class="arrow">→</span>
+        </a>
+        <a class="link-card" href="#" target="_blank" rel="noopener">
+          <span class="k-inline">cd</span><span class="label">&nbsp;~/youtube</span><span class="arrow">→</span>
+        </a>
+      </div>
+    </div>
+    <div class="row indent-1"><span class="t">&lt;/section&gt;</span></div>
+    <div class="row"></div>
+
+    <div class="row indent-1"><span class="c">&lt;!-- merch + music store --&gt;</span></div>
+    <div class="row indent-1"><span class="t">&lt;section</span> <span class="a">id</span>=<span class="s">"shop"</span><span class="t">&gt;</span></div>
+    <div class="row indent-2">
+      <div class="links-grid">
+        <a class="link-card" href="#" target="_blank" rel="noopener">
+          <span class="k-inline">cd</span><span class="label">&nbsp;~/merch</span><span class="arrow">→</span>
+        </a>
+        <a class="link-card" href="#" target="_blank" rel="noopener">
+          <span class="k-inline">cd</span><span class="label">&nbsp;~/bandcamp</span><span class="arrow">→</span>
+        </a>
+      </div>
+    </div>
+    <div class="row indent-1"><span class="t">&lt;/section&gt;</span></div>
+    <div class="row"></div>
+
+    <div class="row indent-1"><span class="c">&lt;!-- socials --&gt;</span></div>
+    <div class="row indent-1"><span class="t">&lt;section</span> <span class="a">id</span>=<span class="s">"socials"</span><span class="t">&gt;</span></div>
+    <div class="row indent-2">
+      <div class="links-grid">
+        <a class="link-card" href="#" target="_blank" rel="noopener">
+          <span class="f">cat</span><span class="label">&nbsp;instagram.txt</span><span class="arrow">→</span>
+        </a>
+        <a class="link-card" href="#" target="_blank" rel="noopener">
+          <span class="f">cat</span><span class="label">&nbsp;tiktok.txt</span><span class="arrow">→</span>
+        </a>
+        <a class="link-card" href="#" target="_blank" rel="noopener">
+          <span class="f">cat</span><span class="label">&nbsp;x.txt</span><span class="arrow">→</span>
+        </a>
+        <a class="link-card" href="#" target="_blank" rel="noopener">
+          <span class="f">cat</span><span class="label">&nbsp;email.txt</span><span class="arrow">→</span>
+        </a>
+      </div>
+    </div>
+    <div class="row indent-1"><span class="t">&lt;/section&gt;</span></div>
+    <div class="row"></div>
+
+    <div class="row indent-1 footer-comment">&lt;!-- thanks for reading the source. see you at a show. --&gt;</div>
+    <div class="row"><span class="t">&lt;/body&gt;</span></div>
+    <div class="row"><span class="k">&lt;/html&gt;</span></div>
+
+  </div>
+</div>
+
+<div class="status-bar">
+  <span>UTF-8 · HTML</span>
+  <span id="lineCount">Ln 1, Col 1</span>
+</div>
+
+<script>
+  // Build line-number gutter to match number of .row elements
+  const rows = document.querySelectorAll('#code .row');
+  const gutter = document.getElementById('gutter');
+  rows.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.textContent = i + 1;
+    gutter.appendChild(d);
+  });
+
+  // Fake status bar line/col ticking, purely for flavor
+  const status = document.getElementById('lineCount');
+  document.addEventListener('mousemove', (e) => {
+    const line = Math.min(rows.length, Math.floor(e.clientY / 27) + 1);
+    const col = Math.floor(e.clientX / 8);
+    status.textContent = `Ln ${line}, Col ${col}`;
+  });
+</script>
+
+</body>
+</html>
