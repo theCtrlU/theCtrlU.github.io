@@ -232,13 +232,16 @@
   const canvas = document.getElementById('rain');
   const ctx = canvas.getContext('2d');
   let w, h, cols, drops;
-  const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789<>/=+*';
+  const message = '01010100 01101000 01100101 00100000 01010011 01101111 01110101 01110010 01100011 01100101 00100000 01000011 01101111 01100100 01100101';
+  const chars = message.split('');
+  let msgIndex;
 
   function setup() {
     w = canvas.width = window.innerWidth;
     h = canvas.height = window.innerHeight;
     cols = Math.floor(w / 16);
     drops = new Array(cols).fill(1);
+    msgIndex = new Array(cols).fill(0).map((_, i) => (i * 5) % chars.length);
   }
   setup();
   window.addEventListener('resize', setup);
@@ -249,7 +252,8 @@
     ctx.fillStyle = '#00f1ff';
     ctx.font = '15px monospace';
     for (let i = 0; i < drops.length; i++) {
-      const text = chars[Math.floor(Math.random() * chars.length)];
+      const text = chars[msgIndex[i] % chars.length];
+      msgIndex[i]++;
       ctx.fillText(text, i * 16, drops[i] * 16);
       if (drops[i] * 16 > h && Math.random() > 0.975) drops[i] = 0;
       drops[i]++;
@@ -260,7 +264,7 @@
   // ---- Boot sequence ----
   const bootLines = [
     'INITIALIZING SECURE SHELL...',
-    'CONNECTING TO CTRL-U.NET...',
+    'CONNECTING TO CTRL-PLUS-U.COM...',
     'BYPASSING FIREWALL............ OK',
     'DECRYPTING ARTIST PROFILE..... OK',
     'LOADING DISCOGRAPHY........... OK',
